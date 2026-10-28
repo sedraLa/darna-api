@@ -1,7 +1,9 @@
 <?php
 
-use App\Http\Controllers\V1\OfficePropertyController;
-use App\Http\Controllers\V1\PropertyController;
+use App\Http\Controllers\V1\OfficePropertyController as V1OfficePropertyController;
+use App\Http\Controllers\V1\PropertyController as V1PropertyController;
+use App\Http\Controllers\V2\OfficePropertyController as V2OfficePropertyController;
+use App\Http\Controllers\V2\PropertyController as V2PropertyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -10,22 +12,25 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->group(function () {
+    Route::get('properties', [V1PropertyController::class, 'index']);
+    Route::get('properties/{property}', [V1PropertyController::class, 'show']);
 
-    // Public — cursor-paginated for mobile scrolling
-    // AvailableScope is active: only available properties visible
-    Route::get('properties', [PropertyController::class, 'index']);
-
-    // Public — resolves without AvailableScope so a shared link to any property works,
-    // but the policy still allows view for anyone (viewAny/view both return true)
-    Route::get('properties/{property}', [PropertyController::class, 'show']);
-
-    // Protected — office and admin only
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post('properties', [PropertyController::class, 'store']);
-        Route::patch('properties/{property}', [PropertyController::class, 'update']);
-        Route::delete('properties/{property}', [PropertyController::class, 'destroy']);
+        Route::post('properties', [V1PropertyController::class, 'store']);
+        Route::patch('properties/{property}', [V1PropertyController::class, 'update']);
+        Route::delete('properties/{property}', [V1PropertyController::class, 'destroy']);
+        Route::get('office/properties', [V1OfficePropertyController::class, 'index']);
+    });
+});
 
-        // Office dashboard — regular pagination, all statuses for own office
-        Route::get('office/properties', [OfficePropertyController::class, 'index']);
+Route::prefix('v2')->group(function () {
+    Route::get('properties', [V2PropertyController::class, 'index']);
+    Route::get('properties/{property}', [V2PropertyController::class, 'show']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('properties', [V2PropertyController::class, 'store']);
+        Route::patch('properties/{property}', [V2PropertyController::class, 'update']);
+        Route::delete('properties/{property}', [V2PropertyController::class, 'destroy']);
+        Route::get('office/properties', [V2OfficePropertyController::class, 'index']);
     });
 });

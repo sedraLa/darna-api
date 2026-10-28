@@ -9,7 +9,6 @@ use App\Http\Requests\UpdatePropertyRequest;
 use App\Http\Resources\V1\PropertyCardResource;
 use App\Http\Resources\V1\PropertyDetailResource;
 use App\Models\Property;
-use App\Models\Scopes\AvailableScope;
 use App\Services\PropertyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -30,7 +29,11 @@ class PropertyController extends Controller
 
     public function show(Property $property): PropertyDetailResource
     {
-        $this->authorize('view', $property);
+        $user = request()->user();
+
+        if (! \Illuminate\Support\Facades\Gate::forUser($user)->allows('view', $property)) {
+            abort(404);
+        }
 
         $property->loadMissing(['governorate', 'office.logo', 'owner', 'images']);
 

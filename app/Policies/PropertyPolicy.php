@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\UserRole;
+use App\Enums\PropertyStatus;
 use App\Models\Property;
 use App\Models\User;
 
@@ -15,7 +16,23 @@ class PropertyPolicy
 
     public function view(?User $user, Property $property): bool
     {
-        return true;
+        if ($property->status === PropertyStatus::Available) {
+            return true;
+        }
+
+        if ($user === null) {
+            return false;
+        }
+
+        if ($user->role === UserRole::Admin) {
+            return true;
+        }
+
+        if ($user->role === UserRole::Office) {
+            return $user->offices()->where('id', $property->office_id)->exists();
+        }
+
+        return false;
     }
 
     public function create(User $user): bool
