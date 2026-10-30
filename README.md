@@ -1,59 +1,211 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Darna - Real Estate Marketplace API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Darna is an API-first real-estate marketplace backend built with Laravel 12 for Syrian governorates. It allows licensed real-estate offices to publish and manage properties for sale or rent, while public users can browse and inspect property details.
 
-## About Laravel
+This project is strictly API-only and returns JSON across all endpoints.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Technology Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Framework:** Laravel 12
+- **Language:** PHP 8.2+
+- **Database:** SQLite (default for development) / MySQL
+- **Authentication:** Laravel Sanctum (token-based)
+- **Caching:** Redis using Predis with automatic database fallback
+- **Architecture:** API Resources, Form Requests, Policies, Service layer (`PropertyService`, `PropertyCacheService`)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Setup Instructions
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 1. Prerequisites
 
-## Laravel Sponsors
+- PHP 8.2 or higher (with `pdo_sqlite` or `pdo_mysql`, `mbstring`, `openssl`, `curl`)
+- Composer 2.x
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2. Installation
 
-### Premium Partners
+Clone or open the project folder, then install composer dependencies:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+composer install
+```
 
-## Contributing
+### 3. Environment Configuration
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Copy the example environment file and generate the application encryption key:
 
-## Code of Conduct
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Verify that `.env` contains the required settings:
 
-## Security Vulnerabilities
+```dotenv
+APP_NAME=Darna
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+DB_CONNECTION=sqlite
 
-## License
+# Cache store defaults to database fallback when Redis is offline
+CACHE_STORE=database
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+REDIS_CLIENT=predis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=null
+REDIS_TIMEOUT=2
+```
+
+### 4. Database Migrations and Seeding
+
+Run database migrations:
+
+```bash
+php artisan migrate --force
+```
+
+Seed the database with initial governorates, users, offices, owners, properties, and polymorphic images:
+
+```bash
+php artisan db:seed
+```
+
+### 5. Development Tokens
+
+Generate plain Sanctum bearer tokens for seeded accounts at any time:
+
+```bash
+php artisan tokens:generate
+```
+
+This outputs pre-generated tokens for:
+- `admin@darna.test` (Admin)
+- `office1@darna.test` (Office 1)
+- `office2@darna.test` (Office 2)
+- `customer1@darna.test` (Customer)
+
+All seeded user accounts share the password: `password`.
+
+### 6. Starting the API Server
+
+```bash
+php artisan serve
+```
+
+The API will be available at `http://127.0.0.1:8000/api`.
+
+---
+
+## API Versioning (V1 & V2)
+
+The application supports simultaneous V1 and V2 APIs. Both versions share the underlying domain logic via `PropertyService` and `PropertyCacheService` while formatting responses separately through version-specific API Resources.
+
+### Price Representation Difference
+
+- **API V1 (`/api/v1/properties/...`):**
+  ```json
+  {
+    "price": 150000,
+    "currency": "USD"
+  }
+  ```
+
+- **API V2 (`/api/v2/properties/...`):**
+  ```json
+  {
+    "price": {
+      "amount": 150000,
+      "currency": "USD"
+    }
+  }
+  ```
+
+---
+
+## API Endpoints
+
+### Public Endpoints (V1 and V2)
+
+| Method | Endpoint | Description | Pagination |
+|---|---|---|---|
+| `GET` | `/api/v1/properties` | Available property listings with filter parameters | Cursor |
+| `GET` | `/api/v1/properties/featured` | Featured listings (newest 20 available) | None (Cached 10 min) |
+| `GET` | `/api/v1/properties/counts-by-governorate` | Available property count per governorate | None (Cached 10 min) |
+| `GET` | `/api/v1/properties/{id}` | Property details with eager-loaded relations | None (Cached 5 min) |
+
+*(All above endpoints are mirrored under `/api/v2/...`)*
+
+### Office / Authenticated Endpoints
+
+| Method | Endpoint | Auth Required | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/office/properties` | Sanctum (Office) | Office dashboard listings (all statuses) with regular length-aware pagination |
+| `POST` | `/api/v1/properties` | Sanctum (Office/Admin) | Create a property (assigned to user's office) |
+| `PATCH` | `/api/v1/properties/{id}` | Sanctum (Office/Admin) | Update property (restricted to owning office) |
+| `DELETE` | `/api/v1/properties/{id}` | Sanctum (Office/Admin) | Delete property (restricted to owning office) |
+
+---
+
+## Data Privacy & Authorization
+
+1. **Internal Data Protection:** Office commissions and internal notes are strictly omitted from all API Resources.
+2. **Owner Phone Visibility:** Owner phone numbers are hidden (`null`) for unauthenticated requests and only exposed when the request contains a valid Sanctum bearer token.
+3. **Cross-Office Protection:** Real-estate offices can only modify or delete properties belonging to their own office. Attempting to update another office's property returns `403 Forbidden`.
+4. **Pagination Bounds:** Listing requests validate `per_page` (minimum 1, maximum 100). Requesting `per_page > 100` returns `422 Unprocessable Entity` with Arabic validation errors.
+
+---
+
+## Redis Caching and Database Fallback
+
+### What is Cached
+
+| Data | Cache Key | Tag | TTL |
+|---|---|---|---|
+| Featured listings | `properties_featured` | `property_listings` | 10 min |
+| Governorate property counts | `properties_counts_by_governorate` | `property_listings` | 10 min |
+| Individual property detail | `property_detail_{id}` | `property_detail_{id}` | 5 min |
+
+### Cache Invalidation
+
+- **Property created:** Flushes `property_listings` tag.
+- **Property updated:** Flushes `property_listings` tag and `property_detail_{id}` tag.
+- **Property deleted:** Flushes `property_listings` tag and `property_detail_{id}` tag.
+
+### Graceful Fallback
+
+`PropertyCacheService` targets Redis explicitly with a 2-second timeout and 0 retries. When Redis is unavailable, it catches Redis connection exceptions, logs a warning, and executes direct database queries so the application continues functioning seamlessly.
+
+---
+
+## Error Handling
+
+All `/api/*` endpoints return unified JSON error responses:
+
+- **401 Unauthorized:** Missing or invalid Sanctum token (`{"message": "Unauthenticated."}`).
+- **403 Forbidden:** Unauthorized action / cross-office mutation (`{"message": "This action is unauthorized."}`).
+- **404 Not Found:** Property or route does not exist (`{"message": "Not Found."}`).
+- **422 Unprocessable Entity:** Validation failures with field-specific errors and Arabic messages.
+
+---
+
+## Testing with Postman
+
+A Postman collection is included in the project root:
+- `darna-api.postman_collection.json`
+
+### Import and Test
+
+1. Import `darna-api.postman_collection.json` into Postman.
+2. The collection includes pre-configured collection variables (`baseUrl`, `office1Token`, `office2Token`, `customerToken`, `office1PropertyId`, `office2PropertyId`).
+3. Run the requests to verify:
+   - V1 vs V2 price format differences.
+   - Owner phone visibility for anonymous vs authenticated users.
+   - Validation failure when `per_page > 100`.
+   - Authorization 403 on cross-office update.
+   - Unauthenticated 401 response.
+   - Cache invalidation and detail freshness after updating property price.

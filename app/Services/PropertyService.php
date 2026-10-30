@@ -14,6 +14,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class PropertyService
 {
+    public function __construct(private PropertyCacheService $cache) {}
+
     public function list(PropertyFilterRequest $request, array $with = []): LengthAwarePaginator
     {
         $query = Property::query()->with($with);
@@ -51,19 +53,27 @@ class PropertyService
         $data['office_id'] = $officeId;
         $data['status']    = $data['status'] ?? PropertyStatus::Pending->value;
 
-        return Property::withoutGlobalScope(AvailableScope::class)
-            ->create($data);
+        $property = Property::withoutGlobalScope(AvailableScope::class)->create($data);
+
+        $this->cache->invalidateAfterCreate($property);
+
+        return $property;
     }
 
     public function update(UpdatePropertyRequest $request, Property $property): Property
     {
         $property->update($request->validated());
+        $property->refresh();
 
-        return $property->refresh();
+        $this->cache->invalidateAfterUpdate($property);
+
+        return $property;
     }
 
     public function delete(Property $property): void
     {
+        $this->cache->invalidateAfterDelete($property);
+
         $property->delete();
     }
 

@@ -1,0 +1,539 @@
+{
+  "info": {
+    "_postman_id": "a9d70c4b-3d6f-4c12-8809-5a127f884102",
+    "name": "Darna Real Estate API",
+    "description": "Postman collection for Darna Real Estate Marketplace API (Laravel 12). Covers V1 and V2 response differences, data privacy, validation, authorization, and caching behavior.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "4|rIbtGqkCGPO0ry5zaZUGHzCcdlKmtw13vGncgwTWd819afa7",
+      "type": "string"
+    },
+    {
+      "key": "office1Token",
+      "value": "5|nZyFmywdIdh0qOuyqSOaQlZ8E4fFTIpPIDOWQxjCf2a59284",
+      "type": "string"
+    },
+    {
+      "key": "office2Token",
+      "value": "6|z90RJouw0ENqwBqtnPgsmxFKs4ZGgK7BPb7rRBJA70526409",
+      "type": "string"
+    },
+    {
+      "key": "customerToken",
+      "value": "7|3bsUTMDAnSS3XFHsHUrk0bzSgqwZm2lenH0ErNPu4e56f837",
+      "type": "string"
+    },
+    {
+      "key": "office1PropertyId",
+      "value": "17",
+      "type": "string"
+    },
+    {
+      "key": "office2PropertyId",
+      "value": "19",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. API Versioning (V1 vs V2)",
+      "item": [
+        {
+          "name": "V1 Property Detail (Numeric Price)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/{{office1PropertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "{{office1PropertyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json().data;",
+                  "pm.test('V1 price is a numeric value', function () { pm.expect(typeof json.price).to.eql('number'); });",
+                  "pm.test('V1 has top-level currency string', function () { pm.expect(typeof json.currency).to.eql('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V2 Property Detail (Nested Price Object)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/properties/{{office1PropertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v2", "properties", "{{office1PropertyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json().data;",
+                  "pm.test('V2 price is an object', function () { pm.expect(typeof json.price).to.eql('object'); });",
+                  "pm.test('V2 price object contains amount and currency', function () {",
+                  "    pm.expect(typeof json.price.amount).to.eql('number');",
+                  "    pm.expect(typeof json.price.currency).to.eql('string');",
+                  "});",
+                  "pm.test('V2 does not contain top-level currency', function () { pm.expect(json.currency).to.be.undefined; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V1 Properties Listing (Cursor Pagination)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties?per_page=15",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties"],
+              "query": [
+                { "key": "per_page", "value": "15" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has cursor pagination meta', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json).to.have.property('meta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V2 Properties Listing (Cursor Pagination)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/properties?per_page=15",
+              "host": ["{{baseUrl}}"],
+              "path": ["v2", "properties"],
+              "query": [
+                { "key": "per_page", "value": "15" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('First item has V2 price object', function () {",
+                  "    if (json.data.length > 0) {",
+                  "        pm.expect(typeof json.data[0].price).to.eql('object');",
+                  "        pm.expect(json.data[0].price).to.have.property('amount');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Data Privacy (Owner Phone)",
+      "item": [
+        {
+          "name": "Anonymous Request (Phone is Null)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/{{office1PropertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "{{office1PropertyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json().data;",
+                  "pm.test('Owner phone is null for unauthenticated user', function () {",
+                  "    pm.expect(json.owner.phone).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Authenticated Request (Phone is Visible)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/{{office1PropertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "{{office1PropertyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json().data;",
+                  "pm.test('Owner phone is visible for authenticated user', function () {",
+                  "    pm.expect(json.owner.phone).to.not.be.null;",
+                  "    pm.expect(typeof json.owner.phone).to.eql('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Validation and Authorization Errors",
+      "item": [
+        {
+          "name": "Page Size Greater Than 100 (422 Unprocessable)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties?per_page=150",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties"],
+              "query": [
+                { "key": "per_page", "value": "150" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422 Unprocessable Entity', function () { pm.response.to.have.status(422); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Has validation errors for per_page', function () {",
+                  "    pm.expect(json.errors).to.have.property('per_page');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid Store Request Data (422 Unprocessable)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{office1Token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"\" }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422 Unprocessable Entity', function () { pm.response.to.have.status(422); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Has validation errors object', function () {",
+                  "    pm.expect(json).to.have.property('errors');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unauthenticated Creation Attempt (401 Unauthorized)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"Test Property\" }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', function () { pm.response.to.have.status(401); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Has Unauthenticated message', function () {",
+                  "    pm.expect(json.message).to.eql('Unauthenticated.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cross-Office Property Update (403 Forbidden)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{office1Token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"Attempted Cross Office Edit\" }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/{{office2PropertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "{{office2PropertyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Reports unauthorized action', function () {",
+                  "    pm.expect(json.message).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Non-Existent Property (404 Not Found)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Caching and Cache Freshness",
+      "item": [
+        {
+          "name": "Featured Properties",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/featured",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "featured"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns up to 20 featured cards', function () {",
+                  "    pm.expect(json.data.length).to.be.at.most(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Available Counts by Governorate",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/counts-by-governorate",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "counts-by-governorate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns governorates with available counts', function () {",
+                  "    pm.expect(json.data.length).to.be.greaterThan(0);",
+                  "    pm.expect(json.data[0]).to.have.property('available_properties_count');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Property Price (Flushes Detail & Listings Cache)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{office1Token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 375000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/{{office1PropertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "{{office1PropertyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json().data;",
+                  "pm.test('Price updated to 375000', function () {",
+                  "    pm.expect(json.price).to.eql(375000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Detail Freshness After Update",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/properties/{{office1PropertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "properties", "{{office1PropertyId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json().data;",
+                  "pm.test('Detail returns fresh updated price (375000)', function () {",
+                  "    pm.expect(json.price).to.eql(375000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

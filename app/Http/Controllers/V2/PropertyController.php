@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PropertyFilterRequest;
 use App\Http\Requests\StorePropertyRequest;
 use App\Http\Requests\UpdatePropertyRequest;
+use App\Http\Resources\V2\GovernorateCountResource;
 use App\Http\Resources\V2\PropertyCardResource;
 use App\Http\Resources\V2\PropertyDetailResource;
 use App\Models\Property;
+use App\Services\PropertyCacheService;
 use App\Services\PropertyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -16,7 +18,10 @@ use Illuminate\Support\Facades\Gate;
 
 class PropertyController extends Controller
 {
-    public function __construct(private PropertyService $service) {}
+    public function __construct(
+        private PropertyService $service,
+        private PropertyCacheService $cache,
+    ) {}
 
     public function index(PropertyFilterRequest $request): AnonymousResourceCollection
     {
@@ -30,13 +35,16 @@ class PropertyController extends Controller
 
     public function show(Property $property): PropertyDetailResource
     {
-        $user = request()->user();
+        $user = request()->user() ?? request()->user('sanctum');
 
         if (! Gate::forUser($user)->allows('view', $property)) {
             abort(404);
         }
 
-        $property->loadMissing(['governorate', 'office.logo', 'owner', 'images']);
+        $property = $this->cache->getPropertyDetail($property->id, function () use ($property) {
+            $property->loadMissing(['governorate', 'office.logo', 'owner', 'images']);
+            return $property;
+        });
 
         return new PropertyDetailResource($property);
     }
@@ -68,5 +76,19 @@ class PropertyController extends Controller
         $this->service->delete($property);
 
         return response()->json(['message' => 'تم حذف العقار بنجاح.']);
+    }
+
+    public function featured(): AnonymousResourceCollection
+    {
+        $properties = $this->cache->getFeatured();
+
+        return PropertyCardResource::collection($properties);
+    }
+
+    public function countsByGovernorate(): AnonymousResourceCollection
+    {
+        $governorates = $this->cache->getGovernoratePropertyCounts();
+
+        return GovernorateCountResource::collection($governorates);
     }
 }

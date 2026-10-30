@@ -31,7 +31,7 @@ class PropertyDetailResource extends JsonResource
                 return [
                     'id'    => $owner->id,
                     'name'  => $owner->name,
-                    'phone' => $request->user() ? $owner->phone : null,
+                    'phone' => ($request->user() ?? $request->user('sanctum')) ? $owner->phone : null,
                 ];
             }),
             'images'      => $this->whenLoaded('images', fn () => ImageResource::collection($this->images)),

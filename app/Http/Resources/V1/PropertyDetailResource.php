@@ -26,8 +26,7 @@ class PropertyDetailResource extends JsonResource
                 return [
                     'id'    => $owner->id,
                     'name'  => $owner->name,
-                    // Phone is only visible to authenticated users
-                    'phone' => $request->user() ? $owner->phone : null,
+                    'phone' => ($request->user() ?? $request->user('sanctum')) ? $owner->phone : null,
                 ];
             }),
             'images'         => $this->whenLoaded('images', fn () => ImageResource::collection($this->images)),

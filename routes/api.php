@@ -13,6 +13,8 @@ Route::get('/user', function (Request $request) {
 
 Route::prefix('v1')->group(function () {
     Route::get('properties', [V1PropertyController::class, 'index']);
+    Route::get('properties/featured', [V1PropertyController::class, 'featured']);
+    Route::get('properties/counts-by-governorate', [V1PropertyController::class, 'countsByGovernorate']);
     Route::get('properties/{property}', [V1PropertyController::class, 'show']);
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -25,6 +27,8 @@ Route::prefix('v1')->group(function () {
 
 Route::prefix('v2')->group(function () {
     Route::get('properties', [V2PropertyController::class, 'index']);
+    Route::get('properties/featured', [V2PropertyController::class, 'featured']);
+    Route::get('properties/counts-by-governorate', [V2PropertyController::class, 'countsByGovernorate']);
     Route::get('properties/{property}', [V2PropertyController::class, 'show']);
 
     Route::middleware('auth:sanctum')->group(function () {
